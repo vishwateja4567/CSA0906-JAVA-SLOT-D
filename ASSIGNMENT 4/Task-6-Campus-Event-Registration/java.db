@@ -1,0 +1,22 @@
+
+CREATE DATABASE campus_events;
+
+USE campus_events;
+
+CREATE TABLE registrations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id VARCHAR(30) NOT NULL,
+    student_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    event_name VARCHAR(100) NOT NULL,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(student_id, event_name)
+);
+
+INSERT INTO registrations
+(student_id, student_name, email, event_name)
+VALUES
+('192425001', 'Arun', 'arun@gmail.com', 'Coding Contest'),
+('192425002', 'Divya', 'divya@gmail.com', 'Cultural Fest'),
+('192425003', 'Kiran', 'kiran@gmail.com', 'Coding Contest');

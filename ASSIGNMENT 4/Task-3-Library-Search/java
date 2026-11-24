@@ -1,0 +1,91 @@
+
+import javax.swing.*;
+import java.awt.*;
+
+public class LibrarySearch extends JFrame {
+
+    JTextField searchField = new JTextField(15);
+
+    String[] categories = {
+        "All", "Java", "Python", "Database"
+    };
+
+    JComboBox<String> category =
+            new JComboBox<>(categories);
+
+    JTextArea results = new JTextArea();
+
+    JLabel status = new JLabel("Ready");
+
+    public LibrarySearch() {
+        setTitle("Campus Library Search");
+        setLayout(new BorderLayout(10, 10));
+
+        // Search Panel
+        JPanel searchPanel = new JPanel(
+                new FlowLayout());
+
+        JButton search = new JButton("Search");
+
+        searchPanel.add(searchField);
+        searchPanel.add(category);
+        searchPanel.add(search);
+
+        // Results Area
+        results.setEditable(false);
+        JScrollPane scrollPane =
+                new JScrollPane(results);
+
+        // Bottom Panel
+        JPanel bottomPanel = new JPanel(
+                new FlowLayout());
+
+        JButton prev = new JButton("Prev");
+        JButton next = new JButton("Next");
+        JButton reserve = new JButton("Reserve");
+
+        bottomPanel.add(prev);
+        bottomPanel.add(next);
+        bottomPanel.add(reserve);
+        bottomPanel.add(status);
+
+        // Search Action
+        search.addActionListener(e -> {
+            String book = searchField.getText();
+            String type = category.getSelectedItem().toString();
+
+            if (book.trim().isEmpty()) {
+                status.setText("Enter book name");
+            } else {
+                results.setText(
+                    "Search Results:\n" +
+                    "Book: " + book +
+                    "\nCategory: " + type
+                );
+                status.setText("Search completed");
+            }
+        });
+
+        prev.addActionListener(e ->
+                status.setText("Previous page"));
+
+        next.addActionListener(e ->
+                status.setText("Next page"));
+
+        reserve.addActionListener(e ->
+                status.setText("Book reserved"));
+
+        add(searchPanel, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        setSize(600, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() ->
+                new LibrarySearch().setVisible(true));
+    }
+}

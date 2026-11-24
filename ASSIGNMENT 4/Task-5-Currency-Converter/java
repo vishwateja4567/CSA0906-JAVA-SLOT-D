@@ -1,0 +1,131 @@
+
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
+public class Converter extends JFrame implements ActionListener {
+
+    JTextField amount = new JTextField(10);
+    JComboBox<String> target = new JComboBox<>(
+            new String[]{"USD", "EUR"}
+    );
+    JLabel result = new JLabel("Result: ");
+
+    int style;
+
+    Converter(int style) {
+        super("Currency Converter - Style " + style);
+        this.style = style;
+
+        setLayout(new FlowLayout());
+
+        JButton convert = new JButton("Convert");
+
+        add(new JLabel("Amount (INR):"));
+        add(amount);
+        add(target);
+        add(convert);
+        add(result);
+
+        // Style 1: Frame implements ActionListener
+        if (style == 1) {
+            convert.addActionListener(this);
+            amount.addActionListener(this);
+        }
+
+        // Style 2: Named inner class
+        else if (style == 2) {
+            ConvertHandler handler = new ConvertHandler();
+            convert.addActionListener(handler);
+            amount.addActionListener(handler);
+        }
+
+        // Style 3: Anonymous inner class
+        else if (style == 3) {
+            ActionListener handler = new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    convertAmount();
+                }
+            };
+
+            convert.addActionListener(handler);
+            amount.addActionListener(handler);
+        }
+
+        // Style 4: Lambda expression
+        else {
+            ActionListener handler =
+                    e -> convertAmount();
+
+            convert.addActionListener(handler);
+            amount.addActionListener(handler);
+        }
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                dispose();
+            }
+        });
+
+        setSize(350, 180);
+        setLocationRelativeTo(null);
+    }
+
+    // Style 1 handler
+    public void actionPerformed(ActionEvent e) {
+        convertAmount();
+    }
+
+    // Style 2 named inner class
+    class ConvertHandler implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            convertAmount();
+        }
+    }
+
+    private void convertAmount() {
+        try {
+            double inr = Double.parseDouble(amount.getText());
+
+            if (inr <= 0) {
+                throw new NumberFormatException();
+            }
+
+            String currency = target.getSelectedItem().toString();
+
+            double rate = currency.equals("USD") ? 0.012 : 0.011;
+
+            double converted = inr * rate;
+
+            String message = String.format(
+                    "INR %.2f = %s %.2f",
+                    inr, currency, converted
+            );
+
+            result.setText(currency + ": " +
+                    String.format("%.2f", converted));
+
+            JOptionPane.showMessageDialog(this, message);
+
+        } catch (NumberFormatException ex) {
+            result.setText("Invalid amount");
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter a valid positive amount.",
+                    "Input Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+
+            for (int i = 1; i <= 4; i++) {
+                new Converter(i).setVisible(true);
+            }
+
+        });
+    }
+}

@@ -1,0 +1,38 @@
+
+class FeeService {
+    public String payFee(String regNo, String amount) {
+        if (regNo.isEmpty() || amount.isEmpty()) {
+            return "Please enter all details.";
+        }
+
+        try {
+            double fee = Double.parseDouble(amount);
+
+            if (fee <= 0) {
+                return "Amount must be greater than zero.";
+            }
+
+            return "Payment Successful!\nRegister No: "
+                    + regNo + "\nAmount: Rs. " + fee;
+
+        } catch (NumberFormatException e) {
+            return "Enter a valid amount.";
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        FeeService service = new FeeService();
+
+        String regNo = "192425326";
+        String amount = "5000";
+
+        System.out.println("STUDENT FEE PAYMENT SYSTEM");
+        System.out.println("Register Number: " + regNo);
+        System.out.println("Amount: " + amount);
+
+        System.out.println("\n" +
+                service.payFee(regNo, amount));
+    }
+}

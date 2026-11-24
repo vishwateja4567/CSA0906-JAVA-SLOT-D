@@ -1,0 +1,410 @@
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.*;
+import java.util.List;
+import java.io.FileWriter;
+
+class DBConnection {
+
+    static Connection getConnection() throws SQLException {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new SQLException(
+                "MySQL JDBC driver not found. Add mysql-connector-j.jar to your classpath.",
+                e
+            );
+        }
+
+        return DriverManager.getConnection(
+            "jdbc:mysql://localhost:3306/campus_events?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
+            "root",
+            "2235rmsql"
+        );
+    }
+}
+
+class RegistrationDAO {
+
+    boolean register(String id, String name,
+                     String email, String event)
+                     throws SQLException {
+
+        String sql = "INSERT INTO registrations " +
+                "(student_id, student_name, email, event_name) " +
+                "VALUES (?, ?, ?, ?)";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, id);
+            ps.setString(2, name);
+            ps.setString(3, email);
+            ps.setString(4, event);
+
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    ResultSet getRegistrations(String event, int offset)
+            throws SQLException {
+
+        Connection con = DBConnection.getConnection();
+
+        String sql = "SELECT id, student_id, student_name, " +
+                "email, event_name FROM registrations " +
+                (event.equals("All") ? "" : "WHERE event_name = ? ") +
+                "ORDER BY id LIMIT 100 OFFSET ?";
+
+        PreparedStatement ps = con.prepareStatement(sql);
+
+        int index = 1;
+
+        if (!event.equals("All")) {
+            ps.setString(index++, event);
+        }
+
+        ps.setInt(index, offset);
+
+        // Connection and statement are closed by the caller
+        return new WrappedResultSet(
+                con, ps, ps.executeQuery()
+        ).result;
+    }
+
+    static class WrappedResultSet {
+        Connection connection;
+        PreparedStatement statement;
+        ResultSet result;
+
+        WrappedResultSet(Connection c, PreparedStatement s,
+                         ResultSet r) {
+            connection = c;
+            statement = s;
+            result = r;
+        }
+    }
+
+    void closeResources(ResultSet rs) {
+        try {
+            if (rs != null) {
+                Statement st = rs.getStatement();
+                Connection con = st.getConnection();
+                rs.close();
+                st.close();
+                con.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class RegistrationService {
+
+    RegistrationDAO dao = new RegistrationDAO();
+
+    String register(String id, String name,
+                    String email, String event) {
+
+        if (id.isEmpty() || name.isEmpty() ||
+            email.isEmpty() || event.isEmpty()) {
+            return "All fields are required!";
+        }
+
+        if (!email.matches(
+                "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            return "Invalid email address!";
+        }
+
+        try {
+            dao.register(id, name, email, event);
+            return "Registration Successful!";
+
+        } catch (SQLIntegrityConstraintViolationException e) {
+            return "Duplicate registration!";
+
+        } catch (SQLException e) {
+            return "Database Error: " + e.getMessage();
+        }
+    }
+}
+
+public class CampusEventApp extends JFrame {
+
+    JTextField id = new JTextField(12);
+    JTextField name = new JTextField(12);
+    JTextField email = new JTextField(12);
+
+    JComboBox<String> event = new JComboBox<>(
+        new String[]{
+            "Coding Contest",
+            "Cultural Fest",
+            "Sports Meet"
+        }
+    );
+
+    JComboBox<String> filter = new JComboBox<>(
+        new String[]{
+            "All",
+            "Coding Contest",
+            "Cultural Fest",
+            "Sports Meet"
+        }
+    );
+
+    DefaultTableModel model = new DefaultTableModel(
+        new String[]{
+            "ID", "Student ID", "Name", "Email", "Event"
+        }, 0
+    );
+
+    JTable table = new JTable(model);
+
+    RegistrationService service =
+            new RegistrationService();
+
+    RegistrationDAO dao = new RegistrationDAO();
+
+    int page = 0;
+
+    public CampusEventApp() {
+
+        setTitle("Campus Event Registration");
+
+        setLayout(new BorderLayout());
+
+        // Menu bar
+        JMenuBar menuBar = new JMenuBar();
+
+        JMenu file = new JMenu("File");
+
+        JMenuItem export = new JMenuItem("Export CSV");
+        JMenuItem exit = new JMenuItem("Exit");
+
+        file.add(export);
+        file.add(exit);
+
+        menuBar.add(file);
+        setJMenuBar(menuBar);
+
+        // Registration panel
+        JPanel form = new JPanel(new GridLayout(5, 2, 5, 5));
+
+        JButton register = new JButton("Register");
+
+        form.add(new JLabel("Student ID:"));
+        form.add(id);
+
+        form.add(new JLabel("Student Name:"));
+        form.add(name);
+
+        form.add(new JLabel("Email:"));
+        form.add(email);
+
+        form.add(new JLabel("Event:"));
+        form.add(event);
+
+        form.add(register);
+
+        // Filter panel
+        JPanel top = new JPanel(new FlowLayout());
+
+        JButton search = new JButton("Filter");
+
+        top.add(new JLabel("Filter Event:"));
+        top.add(filter);
+        top.add(search);
+
+        JPanel north = new JPanel(new BorderLayout());
+
+        north.add(form, BorderLayout.NORTH);
+        north.add(top, BorderLayout.SOUTH);
+
+        // Table
+        JScrollPane scroll = new JScrollPane(table);
+
+        // Bottom panel
+        JPanel bottom = new JPanel();
+
+        JButton previous = new JButton("Previous");
+        JButton next = new JButton("Next");
+
+        bottom.add(previous);
+        bottom.add(next);
+
+        add(north, BorderLayout.NORTH);
+        add(scroll, BorderLayout.CENTER);
+        add(bottom, BorderLayout.SOUTH);
+
+        // Register event
+        register.addActionListener(e -> {
+
+            String message = service.register(
+                id.getText().trim(),
+                name.getText().trim(),
+                email.getText().trim(),
+                event.getSelectedItem().toString()
+            );
+
+            JOptionPane.showMessageDialog(this, message);
+
+            if (message.equals("Registration Successful!")) {
+                id.setText("");
+                name.setText("");
+                email.setText("");
+                page = 0;
+                loadData();
+            }
+        });
+
+        search.addActionListener(e -> {
+            page = 0;
+            loadData();
+        });
+
+        previous.addActionListener(e -> {
+            if (page > 0) {
+                page--;
+                loadData();
+            }
+        });
+
+        next.addActionListener(e -> {
+            page++;
+            loadData();
+        });
+
+        export.addActionListener(e -> exportCSV());
+
+        exit.addActionListener(e -> dispose());
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                dispose();
+            }
+        });
+
+        setSize(850, 550);
+        setLocationRelativeTo(null);
+
+        loadData();
+    }
+
+    // Load records in background
+    void loadData() {
+
+        model.setRowCount(0);
+
+        String selected =
+                filter.getSelectedItem().toString();
+
+        int offset = page * 100;
+
+        new SwingWorker<Object[][], Void>() {
+
+            protected Object[][] doInBackground()
+                    throws Exception {
+
+                java.util.List<Object[]> rows =
+                        new java.util.ArrayList<>();
+
+                String sql =
+                    "SELECT id, student_id, student_name, " +
+                    "email, event_name FROM registrations " +
+                    (selected.equals("All")
+                        ? "" : "WHERE event_name = ? ") +
+                    "ORDER BY id LIMIT 100 OFFSET ?";
+
+                try (Connection con =
+                        DBConnection.getConnection();
+                     PreparedStatement ps =
+                        con.prepareStatement(sql)) {
+
+                    int i = 1;
+
+                    if (!selected.equals("All")) {
+                        ps.setString(i++, selected);
+                    }
+
+                    ps.setInt(i, offset);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+
+                        while (rs.next()) {
+                            rows.add(new Object[]{
+                                rs.getInt("id"),
+                                rs.getString("student_id"),
+                                rs.getString("student_name"),
+                                rs.getString("email"),
+                                rs.getString("event_name")
+                            });
+                        }
+                    }
+                }
+
+                return rows.toArray(new Object[0][]);
+            }
+
+            protected void done() {
+                try {
+                    for (Object[] row : get()) {
+                        model.addRow(row);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(
+                        CampusEventApp.this,
+                        "Unable to load registrations."
+                    );
+                }
+            }
+
+        }.execute();
+    }
+
+    // Export table data
+    void exportCSV() {
+
+        try (FileWriter writer =
+                new FileWriter("registrations.csv")) {
+
+            writer.write(
+                "ID,Student ID,Name,Email,Event\n"
+            );
+
+            for (int i = 0; i < model.getRowCount(); i++) {
+
+                for (int j = 0; j < model.getColumnCount(); j++) {
+                    writer.write(
+                        model.getValueAt(i, j).toString()
+                    );
+
+                    if (j < model.getColumnCount() - 1) {
+                        writer.write(",");
+                    }
+                }
+
+                writer.write("\n");
+            }
+
+            JOptionPane.showMessageDialog(
+                this, "CSV exported successfully!"
+            );
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                this, "Export failed!"
+            );
+        }
+    }
+
+    public static void main(String[] args) {
+
+        SwingUtilities.invokeLater(() ->
+            new CampusEventApp().setVisible(true)
+        );
+    }
+}
