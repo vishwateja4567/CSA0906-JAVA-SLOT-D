@@ -1,0 +1,148 @@
+
+public class Main {
+
+    static volatile long result;
+
+    // Original solution: repeated String concatenation
+    static String originalSolution(String[] fields) {
+
+        String ticket = "";
+
+        for (String field : fields) {
+            ticket = ticket + field;
+        }
+
+        return ticket;
+    }
+
+    // Redesigned solution: StringBuilder
+    static String redesignedSolution(String[] fields) {
+
+        StringBuilder ticket = new StringBuilder();
+
+        for (String field : fields) {
+            ticket.append(field);
+        }
+
+        return ticket.toString();
+    }
+
+    static long runOriginal(String[] fields, int count) {
+
+        long total = 0;
+
+        for (int i = 0; i < count; i++) {
+            String ticket = originalSolution(fields);
+            total += ticket.length();
+        }
+
+        result = total;
+
+        return total;
+    }
+
+    static long runRedesigned(String[] fields, int count) {
+
+        long total = 0;
+
+        for (int i = 0; i < count; i++) {
+            String ticket = redesignedSolution(fields);
+            total += ticket.length();
+        }
+
+        result = total;
+
+        return total;
+    }
+
+    static void compare(String[] fields, int tickets) {
+
+        // Warm-up
+        runOriginal(fields, Math.max(1, tickets / 10));
+        runRedesigned(fields, Math.max(1, tickets / 10));
+
+        long originalTime = 0;
+        long redesignedTime = 0;
+
+        int repetitions = 3;
+
+        for (int i = 0; i < repetitions; i++) {
+
+            long start = System.nanoTime();
+
+            runOriginal(fields, tickets);
+
+            originalTime += System.nanoTime() - start;
+
+            start = System.nanoTime();
+
+            runRedesigned(fields, tickets);
+
+            redesignedTime += System.nanoTime() - start;
+        }
+
+        double originalMs =
+            originalTime / 3.0 / 1000000.0;
+
+        double redesignedMs =
+            redesignedTime / 3.0 / 1000000.0;
+
+        System.out.println("\nTickets: " + tickets);
+        System.out.println("Fields per ticket: " + fields.length);
+
+        System.out.printf(
+            "Original String time: %.3f ms%n",
+            originalMs
+        );
+
+        System.out.printf(
+            "Redesigned StringBuilder time: %.3f ms%n",
+            redesignedMs
+        );
+
+        System.out.println(
+            "Original estimated intermediate Strings: "
+            + ((long) tickets * fields.length)
+        );
+
+        System.out.println(
+            "Redesigned intermediate Strings: 0"
+        );
+
+        if (redesignedMs > 0) {
+            System.out.printf(
+                "Time improvement: %.2f%%%n",
+                ((originalMs - redesignedMs)
+                / originalMs) * 100
+            );
+        }
+    }
+
+    static String[] createFields(int count) {
+
+        String[] fields = new String[count];
+
+        for (int i = 0; i < count; i++) {
+            fields[i] = "FIELD" + i + "=DATA;";
+        }
+
+        return fields;
+    }
+
+    public static void main(String[] args) {
+
+        System.out.println(
+            "RAILWAY TICKET SYSTEM - REDESIGN COMPARISON"
+        );
+
+        String[] fields = createFields(50);
+
+        compare(fields, 1000);
+
+        compare(fields, 5000);
+
+        compare(fields, 10000);
+
+        System.out.println("\nRedesign Validation Completed!");
+    }
+}

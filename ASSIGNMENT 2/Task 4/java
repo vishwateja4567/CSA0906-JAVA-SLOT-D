@@ -1,0 +1,124 @@
+
+import java.util.*;
+
+public class Main {
+
+    static volatile int result;
+
+    static void test(int size) {
+
+        Map<String, Integer> hashMap = new HashMap<>();
+        Map<String, Integer> treeMap = new TreeMap<>();
+        Map<String, Integer> linkedMap = new LinkedHashMap<>();
+
+        // Insert medicines
+        for (int i = 1; i <= size; i++) {
+            String code = String.format("MED%05d", i);
+
+            hashMap.put(code, i * 10);
+            treeMap.put(code, i * 10);
+            linkedMap.put(code, i * 10);
+        }
+
+        System.out.println("\nMedicine Count: " + size);
+
+        // Lookup test
+        int lookups = 100000;
+
+        long start = System.nanoTime();
+
+        for (int i = 1; i <= lookups; i++) {
+            result += hashMap.get(
+                String.format("MED%05d", (i % size) + 1)
+            );
+        }
+
+        long hashTime = System.nanoTime() - start;
+
+        start = System.nanoTime();
+
+        for (int i = 1; i <= lookups; i++) {
+            result += treeMap.get(
+                String.format("MED%05d", (i % size) + 1)
+            );
+        }
+
+        long treeTime = System.nanoTime() - start;
+
+        start = System.nanoTime();
+
+        for (int i = 1; i <= lookups; i++) {
+            result += linkedMap.get(
+                String.format("MED%05d", (i % size) + 1)
+            );
+        }
+
+        long linkedTime = System.nanoTime() - start;
+
+        System.out.println("\n100,000 Lookup Results:");
+        System.out.printf("HashMap: %.3f ms%n",
+                hashTime / 1e6);
+        System.out.printf("TreeMap: %.3f ms%n",
+                treeTime / 1e6);
+        System.out.printf("LinkedHashMap: %.3f ms%n",
+                linkedTime / 1e6);
+
+        // Report generation
+        start = System.nanoTime();
+
+        for (String key : hashMap.keySet()) {
+            result += key.length();
+        }
+
+        long hashReport = System.nanoTime() - start;
+
+        start = System.nanoTime();
+
+        for (String key : treeMap.keySet()) {
+            result += key.length();
+        }
+
+        long treeReport = System.nanoTime() - start;
+
+        start = System.nanoTime();
+
+        for (String key : linkedMap.keySet()) {
+            result += key.length();
+        }
+
+        long linkedReport = System.nanoTime() - start;
+
+        System.out.println("\nReport Generation:");
+        System.out.printf("HashMap: %.3f ms%n",
+                hashReport / 1e6);
+        System.out.printf("TreeMap: %.3f ms%n",
+                treeReport / 1e6);
+        System.out.printf("LinkedHashMap: %.3f ms%n",
+                linkedReport / 1e6);
+
+        System.out.println("\nFirst 5 Medicine Codes:");
+
+        System.out.println("HashMap: " +
+                new ArrayList<>(hashMap.keySet())
+                .subList(0, 5));
+
+        System.out.println("TreeMap: " +
+                new ArrayList<>(treeMap.keySet())
+                .subList(0, 5));
+
+        System.out.println("LinkedHashMap: " +
+                new ArrayList<>(linkedMap.keySet())
+                .subList(0, 5));
+    }
+
+    public static void main(String[] args) {
+
+        System.out.println("PHARMACY INVENTORY SYSTEM");
+
+        test(1000);
+        test(5000);
+        test(10000);
+
+        System.out.println("\nBenchmark Completed!");
+    }
+}

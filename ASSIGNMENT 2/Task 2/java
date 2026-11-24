@@ -1,0 +1,257 @@
+
+import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
+
+public class Main {
+
+    interface TimedTask {
+        long run();
+    }
+
+    static volatile long blackHole;
+
+    static final int REPEATS = 3;
+    static final int OPS = 500;
+    static final int GET_OPS = 1000;
+    static final int ITERATIONS = 10;
+
+    // Average execution time with one warm-up
+    static long average(TimedTask task) {
+
+        task.run();
+
+        long total = 0;
+
+        for (int i = 0; i < REPEATS; i++) {
+            total += task.run();
+        }
+
+        return total / REPEATS;
+    }
+
+    // Create initial playlist
+    static List<String> createList(boolean arrayList,
+                                   int size) {
+
+        List<String> list = arrayList
+                ? new ArrayList<>()
+                : new LinkedList<>();
+
+        for (int i = 0; i < size; i++) {
+            list.add("Song" + i);
+        }
+
+        return list;
+    }
+
+    // Different list operations
+    static long measureList(boolean arrayList,
+                            int size, int operation) {
+
+        List<String> list;
+        long start;
+        long sum = 0;
+
+        if (operation == 0) {
+            list = createList(arrayList, size);
+
+            start = System.nanoTime();
+
+            for (int i = 0; i < OPS; i++)
+                list.add("NewSong" + i);
+
+            long time = System.nanoTime() - start;
+            blackHole += list.size();
+            return time;
+        }
+
+        if (operation == 1) {
+            list = createList(arrayList, size);
+
+            start = System.nanoTime();
+
+            for (int i = 0; i < OPS; i++)
+                list.add(0, "Front" + i);
+
+            long time = System.nanoTime() - start;
+            blackHole += list.size();
+            return time;
+        }
+
+        if (operation == 2) {
+            list = createList(arrayList, size + OPS);
+
+            start = System.nanoTime();
+
+            for (int i = 0; i < OPS; i++)
+                list.remove(0);
+
+            long time = System.nanoTime() - start;
+            blackHole += list.size();
+            return time;
+        }
+
+        if (operation == 3) {
+            list = createList(arrayList, size);
+
+            start = System.nanoTime();
+
+            for (int i = 0; i < OPS; i++)
+                list.add(list.size() / 2, "Middle" + i);
+
+            long time = System.nanoTime() - start;
+            blackHole += list.size();
+            return time;
+        }
+
+        if (operation == 4) {
+            list = createList(arrayList, size + OPS);
+
+            start = System.nanoTime();
+
+            for (int i = 0; i < OPS; i++)
+                list.remove(list.size() / 2);
+
+            long time = System.nanoTime() - start;
+            blackHole += list.size();
+            return time;
+        }
+
+        if (operation == 5) {
+            list = createList(arrayList, size);
+
+            start = System.nanoTime();
+
+            for (int i = 0; i < GET_OPS; i++)
+                sum += list.get((i * 37) % list.size()).length();
+
+            long time = System.nanoTime() - start;
+            blackHole += sum;
+            return time;
+        }
+
+        // Iterate through complete playlist
+        list = createList(arrayList, size);
+
+        start = System.nanoTime();
+
+        for (int i = 0; i < ITERATIONS; i++) {
+            for (String song : list) {
+                sum += song.length();
+            }
+        }
+
+        long time = System.nanoTime() - start;
+        blackHole += sum;
+
+        return time;
+    }
+
+    // ArrayDeque operations for Up Next
+    static long measureDeque(int size, int operation) {
+
+        Deque<String> deque = new ArrayDeque<>();
+
+        int initialSize = operation == 2
+                ? size + OPS
+                : size;
+
+        for (int i = 0; i < initialSize; i++)
+            deque.addLast("Song" + i);
+
+        long start = System.nanoTime();
+
+        if (operation == 0) {
+            for (int i = 0; i < OPS; i++)
+                deque.addFirst("Front" + i);
+        } else if (operation == 1) {
+            for (int i = 0; i < OPS; i++)
+                deque.addLast("Back" + i);
+        } else {
+            for (int i = 0; i < OPS; i++)
+                deque.removeFirst();
+        }
+
+        long time = System.nanoTime() - start;
+
+        blackHole += deque.size();
+
+        return time;
+    }
+
+    static double ms(long nanos) {
+        return nanos / 1000000.0;
+    }
+
+    static void showListResults(String name,
+                                boolean arrayList,
+                                int size) {
+
+        System.out.println("\n" + name +
+                " | Playlist Size: " + size);
+
+        System.out.printf("Add at end: %.3f ms%n",
+                ms(average(() -> measureList(arrayList, size, 0))));
+
+        System.out.printf("Insert at front: %.3f ms%n",
+                ms(average(() -> measureList(arrayList, size, 1))));
+
+        System.out.printf("Remove from front: %.3f ms%n",
+                ms(average(() -> measureList(arrayList, size, 2))));
+
+        System.out.printf("Insert in middle: %.3f ms%n",
+                ms(average(() -> measureList(arrayList, size, 3))));
+
+        System.out.printf("Remove from middle: %.3f ms%n",
+                ms(average(() -> measureList(arrayList, size, 4))));
+
+        System.out.printf("Get k-th element: %.3f ms%n",
+                ms(average(() -> measureList(arrayList, size, 5))));
+
+        System.out.printf("Full iteration: %.3f ms%n",
+                ms(average(() -> measureList(arrayList, size, 6))));
+    }
+
+    static void showDequeResults(int size) {
+
+        System.out.println("\nArrayDeque Up Next | Size: " + size);
+
+        System.out.printf("Add at front: %.3f ms%n",
+                ms(average(() -> measureDeque(size, 0))));
+
+        System.out.printf("Add at back: %.3f ms%n",
+                ms(average(() -> measureDeque(size, 1))));
+
+        System.out.printf("Remove from front: %.3f ms%n",
+                ms(average(() -> measureDeque(size, 2))));
+    }
+
+    public static void main(String[] args) {
+
+        int[] sizes = {1000, 5000, 10000};
+
+        System.out.println("MUSIC PLAYLIST BENCHMARK");
+        System.out.println("Average of 3 measured runs after warm-up.");
+        System.out.println("All times measured using System.nanoTime().");
+
+        for (int size : sizes) {
+
+            System.out.println("\n==============================");
+
+            showListResults("ArrayList", true, size);
+
+            showListResults("LinkedList", false, size);
+
+            showDequeResults(size);
+        }
+
+        System.out.println("\nBenchmark Completed!");
+
+        System.out.println(
+            "ArrayDeque does not support indexed get(k) or insert-at-index."
+        );
+    }
+}

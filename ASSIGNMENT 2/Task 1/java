@@ -1,0 +1,152 @@
+
+public class Main {
+
+    interface TicketBuilder {
+        String build(String[] fields);
+    }
+
+    static volatile long blackHole;
+
+    // Approach 1: String concatenation
+    static String buildWithString(String[] fields) {
+        String ticket = "";
+
+        for (String field : fields) {
+            ticket = ticket + field;
+        }
+
+        return ticket;
+    }
+
+    // Approach 2: StringBuilder
+    static String buildWithStringBuilder(String[] fields) {
+        StringBuilder ticket = new StringBuilder();
+
+        for (String field : fields) {
+            ticket.append(field);
+        }
+
+        return ticket.toString();
+    }
+
+    // Approach 3: StringBuffer
+    static String buildWithStringBuffer(String[] fields) {
+        StringBuffer ticket = new StringBuffer();
+
+        for (String field : fields) {
+            ticket.append(field);
+        }
+
+        return ticket.toString();
+    }
+
+    static long run(TicketBuilder builder, String[] fields,
+                    int tickets) {
+
+        long checksum = 0;
+
+        for (int i = 0; i < tickets; i++) {
+            String result = builder.build(fields);
+            checksum += result.length();
+            checksum += result.hashCode();
+        }
+
+        blackHole = checksum;
+        return checksum;
+    }
+
+    static long usedMemory() {
+        Runtime r = Runtime.getRuntime();
+        return r.totalMemory() - r.freeMemory();
+    }
+
+    static void test(String label, TicketBuilder builder,
+                     String[] fields, int tickets) {
+
+        // Warm-up
+        run(builder, fields, Math.max(1, tickets / 10));
+
+        System.gc();
+
+        long before = usedMemory();
+        long totalTime = 0;
+        long checksum = 0;
+
+        // Three repeated measurements
+        for (int i = 0; i < 3; i++) {
+
+            long start = System.nanoTime();
+
+            checksum += run(builder, fields, tickets);
+
+            totalTime += System.nanoTime() - start;
+        }
+
+        long after = usedMemory();
+        blackHole = checksum;
+
+        double averageMs = totalTime / 3.0 / 1000000.0;
+
+        long estimatedStrings =
+            label.equals("String +")
+            ? (long) tickets * fields.length
+            : 0;
+
+        System.out.printf(
+            "%-15s Time: %.3f ms | Estimated Strings: %d | Memory Before: %d KB | Memory After: %d KB%n",
+            label,
+            averageMs,
+            estimatedStrings,
+            before / 1024,
+            after / 1024
+        );
+    }
+
+    static String[] makeFields(int count) {
+
+        String[] fields = new String[count];
+
+        for (int i = 0; i < count; i++) {
+            fields[i] = "FIELD" + (i + 1) + "=DATA;";
+        }
+
+        return fields;
+    }
+
+    static void runWorkload(String name, int tickets,
+                            int fieldCount) {
+
+        String[] fields = makeFields(fieldCount);
+
+        System.out.println("\nWORKLOAD: " + name);
+        System.out.println("Tickets: " + tickets);
+        System.out.println("Fields per ticket: " + fieldCount);
+
+        test("String +", Main::buildWithString,
+             fields, tickets);
+
+        test("StringBuilder", Main::buildWithStringBuilder,
+             fields, tickets);
+
+        test("StringBuffer", Main::buildWithStringBuffer,
+             fields, tickets);
+    }
+
+    public static void main(String[] args) {
+
+        System.out.println(
+            "RAILWAY E-TICKET GENERATION BENCHMARK"
+        );
+
+        runWorkload("Short Ticket", 1, 6);
+
+        runWorkload("Large Workload", 10000, 50);
+
+        runWorkload("Additional Workload", 1000, 12);
+
+        System.out.println("\nBenchmark Completed!");
+        System.out.println(
+            "Memory readings are approximate and may vary."
+        );
+    }
+}

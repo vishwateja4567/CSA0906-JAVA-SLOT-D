@@ -1,0 +1,141 @@
+
+import java.util.HashSet;
+import java.util.Set;
+
+// Corrected Student class
+class Student {
+
+    private final String regNo;
+    private final String name;
+
+    Student(String regNo, String name) {
+        this.regNo = regNo;
+        this.name = name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+
+        if (this == o) return true;
+
+        if (!(o instanceof Student)) return false;
+
+        Student other = (Student) o;
+
+        return regNo.equals(other.regNo);
+    }
+
+    // TODO 1: Correct hashCode implementation
+    @Override
+    public int hashCode() {
+        return regNo.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return regNo + " - " + name;
+    }
+}
+
+// Additional test class with a mutable registration number
+class MutableStudent {
+
+    String regNo;
+
+    MutableStudent(String regNo) {
+        this.regNo = regNo;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+
+        if (this == o) return true;
+
+        if (!(o instanceof MutableStudent)) return false;
+
+        return regNo.equals(
+            ((MutableStudent) o).regNo
+        );
+    }
+
+    @Override
+    public int hashCode() {
+        return regNo.hashCode();
+    }
+}
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        // Assignment's original test
+        Set<Student> present = new HashSet<>();
+
+        present.add(new Student("192311001", "Aru"));
+
+        present.add(new Student("192311002", "Divya"));
+
+        present.add(new Student("192311001", "Aru"));
+
+        System.out.println(
+            "Unique students: " + present.size()
+        );
+
+        // Test 1: Same reference twice
+        Set<Student> sameReference = new HashSet<>();
+
+        Student s1 = new Student("192311003", "Kiran");
+
+        sameReference.add(s1);
+        sameReference.add(s1);
+
+        System.out.println(
+            "Same object scanned twice: "
+            + sameReference.size()
+        );
+
+        // Test 2: Separate objects with same registration number
+        Set<Student> duplicateScans = new HashSet<>();
+
+        duplicateScans.add(
+            new Student("192311004", "Meena")
+        );
+
+        duplicateScans.add(
+            new Student("192311004", "Meena")
+        );
+
+        System.out.println(
+            "Separate objects with same ID: "
+            + duplicateScans.size()
+        );
+
+        // Test 3: Changing registration number after insertion
+        Set<MutableStudent> changingKey = new HashSet<>();
+
+        MutableStudent m = new MutableStudent("192311010");
+
+        changingKey.add(m);
+
+        System.out.println(
+            "Contains before changing ID: " +
+            changingKey.contains(
+                new MutableStudent("192311010")
+            )
+        );
+
+        m.regNo = "192311999";
+
+        System.out.println(
+            "Contains after changing ID: " +
+            changingKey.contains(
+                new MutableStudent("192311999")
+            )
+        );
+
+        System.out.println(
+            "Set size after changing ID: " +
+            changingKey.size()
+        );
+    }
+}
